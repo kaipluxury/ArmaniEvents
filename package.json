@@ -1,0 +1,14 @@
+{
+  "name": "armani-family-event-bot",
+  "version": "1.0.0",
+  "description": "Automated Discord bot for Grand RP Armani Family event alerts",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.3.1",
+    "node-schedule": "^2.1.0"
+  }
+}
