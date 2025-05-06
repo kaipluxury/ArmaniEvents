@@ -1,3 +1,4 @@
+const express = require('express');
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
 const schedule = require('node-schedule');
 
@@ -7,7 +8,7 @@ const client = new Client({
 
 const TAG_ROLE_ID = process.env.TAG_ROLE_ID;
 const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
-const BANNER_URL = 'https://chat.openai.com/c/armani_banner.gif';
+const BANNER_URL = 'https://cdn.discordapp.com/attachments/1346877951609933937/1369249393949147156/standard.gif?ex=681b2c5e&is=6819dade&hm=6f234e1b2c0f47db1c8572f2b9d3249fad8401b5ebfe9cae323057b352c87750';
 
 const CHANNELS = {
   'Informal': '1279094572672356453',
@@ -161,7 +162,7 @@ client.on(Events.InteractionCreate, async interaction => {
     const embed = new EmbedBuilder()
       .setTitle(`📋 Registered Players for ${eventName}`)
       .setDescription(`━━━━━━━━━━━━━━━━━━━\n${mentionList}\n━━━━━━━━━━━━━━━━━━━\nTotal: ${list.length}`)
-      .setColor('#2b2d31');
+      .setColor('#000000');
 
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
@@ -190,9 +191,7 @@ function getEventIcon(eventName) {
 client.login(process.env.DISCORD_TOKEN);
 
 // Keep-alive server for Render
-const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.get('/', (req, res) => res.send('Armani Family Bot is alive!'));
 app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
