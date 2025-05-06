@@ -5,7 +5,6 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
-// CONFIG from Environment
 const TAG_ROLE_ID = process.env.TAG_ROLE_ID;
 const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
 const BANNER_URL = 'https://chat.openai.com/c/armani_banner.gif';
@@ -20,7 +19,6 @@ const CHANNELS = {
 const registeredPlayers = {};
 const messageTracker = [];
 
-// Scheduled events (5 mins early)
 const events = [
   ...Array.from({ length: 24 }, (_, i) => {
     const hour = (i + 4) % 24;
@@ -56,7 +54,6 @@ client.once('ready', async () => {
     });
   }
 
-  // Daily cleanup at 05:00 UK
   schedule.scheduleJob({ hour: 5, minute: 0, tz: 'Europe/London' }, async () => {
     for (const msg of messageTracker) {
       try {
@@ -100,7 +97,6 @@ async function sendEvent(channel, eventName, startTime) {
   if (!registeredPlayers[eventName]) registeredPlayers[eventName] = [];
 }
 
-// Button + /test interaction
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand() && interaction.commandName === 'test') {
     const eventName = "Test Event";
@@ -171,7 +167,7 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Register slash command
+// Slash command registration
 client.on("ready", async () => {
   const data = [{
     name: "test",
@@ -192,3 +188,11 @@ function getEventIcon(eventName) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
+
+// Keep-alive server for Render
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => res.send('Armani Family Bot is alive!'));
+app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
