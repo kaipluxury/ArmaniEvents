@@ -6,9 +6,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
-// Role mentions per event
 const MENTION_ROLES = {
-  'Informal': '1279495000937463878',
   'RP Ticket Factory - PRIORITY': '1284522045551673405',
   'Biz War - PRIORITY': '1279505005472387203',
   'Shopping Center': '1280183480336253080'
@@ -18,7 +16,6 @@ const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
 const BANNER_URL = 'https://cdn.discordapp.com/attachments/1346877951609933937/1369249393949147156/standard.gif?ex=681b2c5e&is=6819dade&hm=6f234e1b2c0f47db1c8572f2b9d3249fad8401b5ebfe9cae323057b352c87750';
 
 const CHANNELS = {
-  'Informal': '1279094572672356453',
   'RP Ticket Factory - PRIORITY': '1284521475788902443',
   'Biz War - PRIORITY': '1279095872537497723',
   'Shopping Center': '1279095972076716092'
@@ -28,10 +25,6 @@ const registeredPlayers = {};
 const messageTracker = [];
 
 const events = [
-  ...Array.from({ length: 24 }, (_, i) => {
-    const hour = (i + 4) % 24;
-    return ['Informal', `${hour.toString().padStart(2, '0')}:40`];
-  }),
   ['RP Ticket Factory - PRIORITY', '10:30'],
   ['RP Ticket Factory - PRIORITY', '16:30'],
   ['RP Ticket Factory - PRIORITY', '22:30'],
@@ -110,44 +103,6 @@ async function sendEvent(channel, eventName, startTime) {
 }
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (interaction.isChatInputCommand() && interaction.commandName === 'test') {
-    const eventName = "Test Event";
-    const startTime = "10:00";
-    const channel = interaction.channel;
-
-    const embed = new EmbedBuilder()
-      .setTitle("🧪 Test Event")
-      .setDescription(
-        `⏰ **Starts In**: 5 minutes (InGame Time)\n` +
-        `🕒 **Exact Start Time**: ${startTime} (InGame Time)\n\n` +
-        `React using the buttons below to register for this event:\n` +
-        `• ✅ Join — Add your name to the list\n` +
-        `• ❌ Leave — Remove yourself if not joining\n` +
-        `• 📋 View — Only for Event Managers`
-      )
-      .setColor('#000000')
-      .setFooter({ text: 'Armani Family | Made By Kai' })
-      .setImage(BANNER_URL);
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('join_Test Event').setLabel('✅ Join').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('leave_Test Event').setLabel('❌ Leave').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('view_Test Event').setLabel('📋 Registered Players').setStyle(ButtonStyle.Primary)
-    );
-
-    const sent = await channel.send({
-      content: `<@&${MENTION_ROLES["Informal"]}>`, // or choose a default
-      embeds: [embed],
-      components: [row]
-    });
-
-    messageTracker.push({ channelId: sent.channel.id, messageId: sent.id });
-    registeredPlayers[eventName] = [];
-
-    await interaction.reply({ content: '✅ Test message sent.', ephemeral: true });
-    return;
-  }
-
   if (!interaction.isButton()) return;
 
   const [action, ...eventNameArr] = interaction.customId.split('_');
@@ -198,14 +153,13 @@ client.on("ready", async () => {
 function getEventIcon(eventName) {
   if (eventName.includes("RP Ticket")) return "🎟️";
   if (eventName.includes("Biz War")) return "⚔️";
-  if (eventName.includes("Informal")) return "📢";
   if (eventName.includes("Shopping")) return "🛍️";
   return "✅";
 }
 
 client.login(process.env.DISCORD_TOKEN);
 
-// Keep-alive server for Render
+// Keep-alive for Render
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('Armani Family Bot is alive!'));
