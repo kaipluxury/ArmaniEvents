@@ -12,8 +12,13 @@ const MENTION_ROLES = {
   'Shopping Center': '1280183480336253080'
 };
 
+const BANNERS = {
+  'RP Ticket Factory - PRIORITY': 'https://raw.githubusercontent.com/kaipluxury/ArmaniEvents/refs/heads/main/C6C97DFF-431F-4F13-8EAB-7B607A39315C.png',
+  'Biz War - PRIORITY': 'https://raw.githubusercontent.com/kaipluxury/ArmaniEvents/refs/heads/main/0D884C51-9315-406A-B7C5-45ACAC210081.png',
+  'Shopping Center': 'https://raw.githubusercontent.com/kaipluxury/ArmaniEvents/refs/heads/main/9A1BD0CB-8AC4-49E5-A793-0B813D435CE7.png'
+};
+
 const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
-const BANNER_URL = 'https://cdn.discordapp.com/attachments/1346877951609933937/1369249393949147156/standard.gif?ex=681b2c5e&is=6819dade&hm=6f234e1b2c0f47db1c8572f2b9d3249fad8401b5ebfe9cae323057b352c87750';
 
 const CHANNELS = {
   'RP Ticket Factory - PRIORITY': '1284521475788902443',
@@ -84,7 +89,7 @@ async function sendEvent(channel, eventName, startTime) {
     )
     .setColor('#000000')
     .setFooter({ text: 'Armani Family | Made By Kai' })
-    .setImage(BANNER_URL);
+    .setImage(BANNERS[eventName]);
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`join_${eventName}`).setLabel('✅ Join').setStyle(ButtonStyle.Success),
@@ -159,7 +164,6 @@ function getEventIcon(eventName) {
 
 client.login(process.env.DISCORD_TOKEN);
 
-// Keep-alive for Render
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('Armani Family Bot is alive!'));
