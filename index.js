@@ -6,7 +6,14 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
-const TAG_ROLE_ID = process.env.TAG_ROLE_ID;
+// Role mentions per event
+const MENTION_ROLES = {
+  'Informal': '1279495000937463878',
+  'RP Ticket Factory - PRIORITY': '1284522045551673405',
+  'Biz War - PRIORITY': '1279505005472387203',
+  'Shopping Center': '1280183480336253080'
+};
+
 const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
 const BANNER_URL = 'https://cdn.discordapp.com/attachments/1346877951609933937/1369249393949147156/standard.gif?ex=681b2c5e&is=6819dade&hm=6f234e1b2c0f47db1c8572f2b9d3249fad8401b5ebfe9cae323057b352c87750';
 
@@ -92,9 +99,13 @@ async function sendEvent(channel, eventName, startTime) {
     new ButtonBuilder().setCustomId(`view_${eventName}`).setLabel('📋 Registered Players').setStyle(ButtonStyle.Primary)
   );
 
-  const sent = await channel.send({ content: `<@&${TAG_ROLE_ID}>`, embeds: [embed], components: [row] });
-  messageTracker.push({ channelId: sent.channel.id, messageId: sent.id });
+  const sent = await channel.send({
+    content: `<@&${MENTION_ROLES[eventName]}>`,
+    embeds: [embed],
+    components: [row]
+  });
 
+  messageTracker.push({ channelId: sent.channel.id, messageId: sent.id });
   if (!registeredPlayers[eventName]) registeredPlayers[eventName] = [];
 }
 
@@ -124,7 +135,12 @@ client.on(Events.InteractionCreate, async interaction => {
       new ButtonBuilder().setCustomId('view_Test Event').setLabel('📋 Registered Players').setStyle(ButtonStyle.Primary)
     );
 
-    const sent = await channel.send({ content: `<@&${TAG_ROLE_ID}>`, embeds: [embed], components: [row] });
+    const sent = await channel.send({
+      content: `<@&${MENTION_ROLES["Informal"]}>`, // or choose a default
+      embeds: [embed],
+      components: [row]
+    });
+
     messageTracker.push({ channelId: sent.channel.id, messageId: sent.id });
     registeredPlayers[eventName] = [];
 
@@ -168,7 +184,6 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Slash command registration
 client.on("ready", async () => {
   const data = [{
     name: "test",
