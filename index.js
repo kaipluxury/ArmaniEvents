@@ -180,11 +180,11 @@ client.on("ready", async () => {
   await guild.commands.set([{ name: 'test', description: 'Send a test event embed' }]);
 });
 
-// ✅ Streaming Status with YouTube Link
+// ✅ Streaming Status Fixed (no "Streaming Streaming")
 const statuses = [
-  "Streaming Armani Family",
-  "Streaming Events",
-  "Streaming Armani Fam Events"
+  "Armani Family",
+  "Events",
+  "Armani Fam Events"
 ];
 let i = 0;
 setInterval(() => {
@@ -197,7 +197,7 @@ setInterval(() => {
 
 client.login(process.env.DISCORD_TOKEN);
 
-// Web server for Render keep-alive
+// Render keep-alive server
 const app = express();
 app.get('/', (req, res) => res.send('Armani Bot Running'));
 app.listen(process.env.PORT || 3000);
