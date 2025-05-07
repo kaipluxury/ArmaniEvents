@@ -1,15 +1,19 @@
 const express = require('express');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const schedule = require('node-schedule');
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 const MENTION_ROLES = {
   'RP Ticket Factory - PRIORITY': '1284522045551673405',
   'Biz War - PRIORITY': '1279505005472387203',
   'Shopping Center': '1280183480336253080'
+};
+
+const SIGNUP_LIMITS = {
+  'RP Ticket Factory - PRIORITY': 25,
+  'Biz War - PRIORITY': 25,
+  'Shopping Center': 5
 };
 
 const BANNERS = {
@@ -19,7 +23,6 @@ const BANNERS = {
 };
 
 const VIEW_ROLE_ID = process.env.VIEW_ROLE_ID;
-
 const CHANNELS = {
   'RP Ticket Factory - PRIORITY': '1284521475788902443',
   'Biz War - PRIORITY': '1279095872537497723',
@@ -43,11 +46,9 @@ client.once('ready', async () => {
 
   for (const [eventName, exactTime] of events) {
     const [hour, minute] = exactTime.split(':').map(Number);
-    const eventDate = new Date();
-    eventDate.setUTCHours(hour, minute - 5, 0, 0);
     const scheduleRule = {
-      hour: eventDate.getUTCHours(),
-      minute: eventDate.getUTCMinutes(),
+      hour: (hour + 23) % 24, // 10 minutes earlier
+      minute: (minute + 50) % 60,
       tz: 'Europe/London'
     };
 
@@ -67,7 +68,7 @@ client.once('ready', async () => {
         const message = await channel.messages.fetch(msg.messageId);
         await message.delete();
       } catch (e) {
-        console.log("❌ Message already deleted or not found.");
+        console.log("❌ Message already deleted.");
       }
     }
     messageTracker.length = 0;
@@ -77,24 +78,19 @@ client.once('ready', async () => {
 });
 
 async function sendEvent(channel, eventName, startTime) {
+  if (!registeredPlayers[eventName]) registeredPlayers[eventName] = [];
+
   const embed = new EmbedBuilder()
     .setTitle(getEventIcon(eventName) + " " + eventName)
-    .setDescription(
-      `⏰ **Starts In**: 5 minutes (InGame Time)\n` +
-      `🕒 **Exact Start Time**: ${startTime} (InGame Time)\n\n` +
-      `React using the buttons below to register for this event:\n` +
-      `• ✅ Join — Add your name to the list\n` +
-      `• ❌ Leave — Remove yourself if not joining\n` +
-      `• 📋 View — Only for Event Managers`
-    )
+    .setDescription(generateDescription(eventName))
     .setColor('#000000')
     .setFooter({ text: 'Armani Family | Made By Kai' })
     .setImage(BANNERS[eventName]);
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`join_${eventName}`).setLabel('✅ Join').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`leave_${eventName}`).setLabel('❌ Leave').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(`view_${eventName}`).setLabel('📋 Registered Players').setStyle(ButtonStyle.Primary)
+    new ButtonBuilder().setCustomId(`join_${eventName}`).setLabel('✅ Sign Up').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`leave_${eventName}`).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`manager_${eventName}`).setLabel('👤 Sign Someone Up').setStyle(ButtonStyle.Primary)
   );
 
   const sent = await channel.send({
@@ -104,11 +100,17 @@ async function sendEvent(channel, eventName, startTime) {
   });
 
   messageTracker.push({ channelId: sent.channel.id, messageId: sent.id });
-  if (!registeredPlayers[eventName]) registeredPlayers[eventName] = [];
+}
+
+function generateDescription(eventName) {
+  const players = registeredPlayers[eventName] || [];
+  const formatted = players.map((entry, i) => `${i + 1}. <@${entry.id}> | ${entry.gameId || 'N/A'}`).join('\n') || 'No players yet.';
+  const limit = SIGNUP_LIMITS[eventName] || 25;
+  return `Sign up below! 🔔 [Armani Alerts]\n\n${formatted}\n\nSignups: ${players.length}/${limit} ✅`;
 }
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isButton()) return;
+  if (!interaction.isButton() && !interaction.isModalSubmit() && !interaction.isChatInputCommand()) return;
 
   const [action, ...eventNameArr] = interaction.customId.split('_');
   const eventName = eventNameArr.join('_');
@@ -116,33 +118,93 @@ client.on(Events.InteractionCreate, async interaction => {
 
   if (!registeredPlayers[eventName]) registeredPlayers[eventName] = [];
 
+  const playerList = registeredPlayers[eventName];
+
   if (action === 'join') {
-    if (!registeredPlayers[eventName].includes(userId)) {
-      registeredPlayers[eventName].push(userId);
+    if (playerList.find(p => p.id === userId)) {
+      return interaction.reply({ content: '❌ You are already signed up.', ephemeral: true });
     }
-    return interaction.reply({ content: `You are registered for **${eventName}**.`, ephemeral: true });
+    if (playerList.length >= SIGNUP_LIMITS[eventName]) {
+      return interaction.reply({ content: '⚠️ Signup full for this event.', ephemeral: true });
+    }
+    playerList.push({ id: userId, gameId: 'N/A' });
+    await updateEmbed(interaction.message, eventName);
+    return interaction.reply({ content: '✅ You are signed up!', ephemeral: true });
   }
 
   if (action === 'leave') {
-    registeredPlayers[eventName] = registeredPlayers[eventName].filter(id => id !== userId);
-    return interaction.reply({ content: `You have been removed from **${eventName}**.`, ephemeral: true });
+    registeredPlayers[eventName] = playerList.filter(p => p.id !== userId);
+    await updateEmbed(interaction.message, eventName);
+    return interaction.reply({ content: '❌ You have been removed.', ephemeral: true });
   }
 
-  if (action === 'view') {
-    const hasAccess = interaction.member.roles.cache.has(VIEW_ROLE_ID);
-    if (!hasAccess) return interaction.reply({ content: '❌ You do not have permission to view registered players.', ephemeral: true });
+  if (action === 'manager') {
+    if (!interaction.member.roles.cache.has(VIEW_ROLE_ID)) {
+      return interaction.reply({ content: '❌ You are not allowed to use this.', ephemeral: true });
+    }
 
-    const list = registeredPlayers[eventName];
-    const mentionList = list.map((id, i) => `${i + 1}. <@${id}>`).join('\n') || 'No one registered yet.';
+    const modal = new ModalBuilder()
+      .setCustomId(`manualadd_${eventName}`)
+      .setTitle(`Sign Someone Up for ${eventName}`);
 
-    const embed = new EmbedBuilder()
-      .setTitle(`📋 Registered Players for ${eventName}`)
-      .setDescription(`━━━━━━━━━━━━━━━━━━━\n${mentionList}\n━━━━━━━━━━━━━━━━━━━\nTotal: ${list.length}`)
-      .setColor('#000000');
+    const userField = new TextInputBuilder()
+      .setCustomId('userid')
+      .setLabel("User ID (Mention or ID)")
+      .setStyle(TextInputStyle.Short);
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    const idField = new TextInputBuilder()
+      .setCustomId('gameid')
+      .setLabel("Game ID (optional)")
+      .setStyle(TextInputStyle.Short);
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(userField),
+      new ActionRowBuilder().addComponents(idField)
+    );
+
+    return interaction.showModal(modal);
+  }
+
+  if (interaction.isModalSubmit() && action === 'manualadd') {
+    if (!interaction.member.roles.cache.has(VIEW_ROLE_ID)) {
+      return interaction.reply({ content: '❌ You are not allowed to use this.', ephemeral: true });
+    }
+    const mention = interaction.fields.getTextInputValue('userid').trim().replace(/[<@!>]/g, '');
+    const gameId = interaction.fields.getTextInputValue('gameid').trim() || 'N/A';
+
+    if (!mention) return interaction.reply({ content: '❌ Invalid user.', ephemeral: true });
+
+    if (playerList.find(p => p.id === mention)) {
+      return interaction.reply({ content: '❌ That user is already signed up.', ephemeral: true });
+    }
+    if (playerList.length >= SIGNUP_LIMITS[eventName]) {
+      return interaction.reply({ content: '⚠️ Signup full.', ephemeral: true });
+    }
+
+    playerList.push({ id: mention, gameId });
+    await updateEmbed(interaction.message, eventName);
+    return interaction.reply({ content: `✅ <@${mention}> has been signed up.`, ephemeral: true });
+  }
+
+  if (interaction.isChatInputCommand() && interaction.commandName === 'test') {
+    const channel = interaction.channel;
+    sendEvent(channel, 'RP Ticket Factory - PRIORITY', '12:00');
+    interaction.reply({ content: '✅ Test embed sent.', ephemeral: true });
   }
 });
+
+async function updateEmbed(message, eventName) {
+  const embed = EmbedBuilder.from(message.embeds[0]);
+  embed.setDescription(generateDescription(eventName));
+  await message.edit({ embeds: [embed] });
+}
+
+function getEventIcon(eventName) {
+  if (eventName.includes("RP Ticket")) return "🎟️";
+  if (eventName.includes("Biz War")) return "⚔️";
+  if (eventName.includes("Shopping")) return "🛍️";
+  return "✅";
+}
 
 client.on("ready", async () => {
   const data = [{
@@ -155,16 +217,9 @@ client.on("ready", async () => {
   await guild.commands.set(data);
 });
 
-function getEventIcon(eventName) {
-  if (eventName.includes("RP Ticket")) return "🎟️";
-  if (eventName.includes("Biz War")) return "⚔️";
-  if (eventName.includes("Shopping")) return "🛍️";
-  return "✅";
-}
-
 client.login(process.env.DISCORD_TOKEN);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('Armani Family Bot is alive!'));
-app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
+app.get('/', (req, res) => res.send('Armani Bot Active'));
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
