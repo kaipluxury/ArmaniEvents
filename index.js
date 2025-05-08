@@ -1,5 +1,10 @@
 const express = require('express');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const {
+  Client, GatewayIntentBits,
+  ActionRowBuilder, ButtonBuilder, ButtonStyle,
+  EmbedBuilder, Events,
+  ModalBuilder, TextInputBuilder, TextInputStyle
+} = require('discord.js');
 const schedule = require('node-schedule');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
@@ -180,7 +185,7 @@ client.on("ready", async () => {
   await guild.commands.set([{ name: 'test', description: 'Send a test event embed' }]);
 });
 
-// ✅ Streaming Status Fixed (no "Streaming Streaming")
+// ✅ Fixed Streaming Presence
 const statuses = [
   "Armani Family",
   "Events",
@@ -197,7 +202,6 @@ setInterval(() => {
 
 client.login(process.env.DISCORD_TOKEN);
 
-// Render keep-alive server
 const app = express();
 app.get('/', (req, res) => res.send('Armani Bot Running'));
 app.listen(process.env.PORT || 3000);
